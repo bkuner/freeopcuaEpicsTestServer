@@ -21,8 +21,6 @@
 
 using namespace OpcUa;
 
-std::vector<Node> manyObjects(1000);
-
 class SubClient : public SubscriptionHandler
 {
   void DataChange(uint32_t handle, const Node& node, const Variant& val, AttributeId attr) override
@@ -36,8 +34,10 @@ inline uint8_t operator|(VariableAccessLevel x, VariableAccessLevel y)
     return (uint8_t) ((uint8_t)x | (uint8_t)y);
 }
 
-void addMany(Node &objects,int nrOfObjects,uint32_t serverNamespace)
+void addMany(std::vector<Node> &manyObjects,Node &objects,uint32_t serverNamespace)
 {
+    int nrOfObjects;
+    nrOfObjects = manyObjects.size();
     NodeId nid(100, serverNamespace);
     QualifiedName qn("ManyObjects", serverNamespace);
     Node newobject = objects.AddObject(nid, qn);
@@ -53,11 +53,13 @@ void addMany(Node &objects,int nrOfObjects,uint32_t serverNamespace)
     }
 }
 
-void RunServer(int nrOfObjects,int wait,int debug)
+void RunServer(std::vector<Node> &manyObjects,int wait,int debug)
 {
   //First setup our server
+  int nrOfObjects;
   bool dbg = false;
   if(debug > 1) dbg = true;
+  nrOfObjects = manyObjects.size();
   OpcUa::UaServer server(dbg);
   server.SetEndpoint("opc.tcp://elbe.acc.bessy.de:4841/freeopcua/server");
   server.SetServerURI("urn://exampleserver.freeopcua.github.io");
@@ -109,7 +111,7 @@ void RunServer(int nrOfObjects,int wait,int debug)
   sub->SubscribeDataChange(myvar);
   */
 
-  addMany(objects,nrOfObjects,idx);
+  addMany(manyObjects,objects,idx);
 
   //Now write values to address space and send events so clients can have some fun
   uint32_t counter = 0;
@@ -190,7 +192,7 @@ const std::string &writeEpicsDbFile(std::string &retStr,const std::string &recNa
 int main(int argc, char** argv)
 {
     int wait = 2000;
-    int nrOfObjects = 1000;
+    int nrOfObjects = 180;
     int verbose = 0;
     int epics = 0;
     int c;
@@ -230,6 +232,7 @@ int main(int argc, char** argv)
             exit(0);
             break;
     }
+    std::vector<Node> manyObjects(nrOfObjects);
     std::cout << "Create ManyObjects:var1 to ManyObjects:var"<<nrOfObjects<<std::endl;
     std::cout << "Update (ms): "<<wait<<std::endl;
     if(epics) {
@@ -242,11 +245,11 @@ int main(int argc, char** argv)
         for(int i=0;i<nrOfObjects;i++) {
             sRec.str( std::string() );
             sRec.clear();
-            sRec << "ManyObjects:var"<<i;
+            sRec << "REC:rdVar"<<(i+1);
 
             sLink.str( std::string() );
             sLink.clear();
-            sLink << "2:ManyObjects.var"<<i;
+            sLink << "2:ManyObjects.var"<<(i+1);
 
             recordStr.clear();
             myfile << writeEpicsDbFile(recordStr,sRec.str(),sLink.str());
@@ -256,7 +259,7 @@ int main(int argc, char** argv)
     }
     try
     {
-        RunServer(nrOfObjects,wait,verbose);
+        RunServer(manyObjects,wait,verbose);
     }
     catch (const std::exception& exc)
     {
