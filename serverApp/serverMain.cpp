@@ -249,7 +249,7 @@ int main(int argc, char** argv)
 
             sLink.str( std::string() );
             sLink.clear();
-            sLink << "2:ManyObjects.var"<<(i+1);
+            sLink << "@2:ManyObjects.var"<<(i+1);
 
             recordStr.clear();
             myfile << writeEpicsDbFile(recordStr,sRec.str(),sLink.str());
